@@ -1,0 +1,149 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX 100
+
+// Node structure for adjacency list
+typedef struct Node {
+    int dest;
+    struct Node* next;
+} Node;
+
+Node* adjList[MAX];
+int visited[MAX];
+int blocked[MAX][MAX]; // Blocked roads matrix
+int n; // number of intersections
+
+// Add undirected edge
+void addEdge(int u, int v) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->dest = v;
+    newNode->next = adjList[u];
+    adjList[u] = newNode;
+
+    newNode = (Node*)malloc(sizeof(Node));
+    newNode->dest = u;
+    newNode->next = adjList[v];
+    adjList[v] = newNode;
+}
+
+// Check if road is blocked
+int isBlocked(int u, int v) {
+    return blocked[u][v] || blocked[v][u];
+}
+
+// BFS for reachability or shortest path
+int bfs(int start, int target, int findShortest) {
+    int queue[MAX], front = 0, rear = 0;
+    int dist[MAX];
+
+    memset(visited, 0, sizeof(visited));
+    memset(dist, -1, sizeof(dist));
+
+    queue[rear++] = start;
+    visited[start] = 1;
+    dist[start] = 0;
+
+    while (front < rear) {
+        int u = queue[front++];
+        Node* temp = adjList[u];
+        while (temp) {
+            int v = temp->dest;
+            if (!visited[v] && !isBlocked(u, v)) {
+                visited[v] = 1;
+                dist[v] = dist[u] + 1;
+                if (v == target && findShortest)
+                    return dist[v];
+                queue[rear++] = v;
+            }
+            temp = temp->next;
+        }
+    }
+
+    return findShortest ? -1 : visited[target];
+}
+
+// Count connected components using BFS
+int countComponents() {
+    int count = 0;
+    memset(visited, 0, sizeof(visited));
+
+    for (int i = 0; i < n; i++) {
+        if (!visited[i]) {
+            bfs(i, -1, 0);
+            count++;
+        }
+    }
+    return count;
+}
+
+int main() {
+    int edges, u, v, choice;
+
+    printf("Enter number of intersections (nodes): ");
+    scanf("%d", &n);
+
+    printf("Enter number of roads (edges): ");
+    scanf("%d", &edges);
+
+    for (int i = 0; i < n; i++) adjList[i] = NULL;
+
+    printf("Enter edges (u v):\n");
+    for (int i = 0; i < edges; i++) {
+        scanf("%d %d", &u, &v);
+        addEdge(u, v);
+    }
+
+    while (1) {
+        printf("\n==== MENU ====\n");
+        printf("1. Check if path exists (AAA → BBB)\n");
+        printf("2. Block a road (u - v)\n");
+        printf("3. Count connected components\n");
+        printf("4. Find shortest path (AAA → BBB)\n");
+        printf("5. Exit\n");
+        printf("Enter choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter AAA and BBB: ");
+                scanf("%d %d", &u, &v);
+                if (bfs(u, v, 0))
+                    printf("✅ Path exists from %d to %d\n", u, v);
+                else
+                    printf("❌ No path from %d to %d\n", u, v);
+                break;
+
+            case 2:
+                printf("Enter road (u v) to block: ");
+                scanf("%d %d", &u, &v);
+                blocked[u][v] = 1;
+                blocked[v][u] = 1;
+                printf("🚧 Blocked road between %d and %d\n", u, v);
+                break;
+
+            case 3:
+                printf("🌐 Connected components: %d\n", countComponents());
+                break;
+
+            case 4:
+                printf("Enter AAA and BBB: ");
+                scanf("%d %d", &u, &v);
+                int d = bfs(u, v, 1);
+                if (d != -1)
+                    printf("📏 Shortest path (roads): %d\n", d);
+                else
+                    printf("❌ No path found.\n");
+                break;
+
+            case 5:
+                return 0;
+
+            default:
+                printf("⚠️ Invalid choice.\n");
+        }
+    }
+
+    return 0;
+}

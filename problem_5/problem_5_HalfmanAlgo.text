@@ -1,0 +1,137 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_CHAR 128
+#define MAX_LEN 100
+
+typedef struct Node {
+    char data;
+    int freq;
+    struct Node* left;
+    struct Node* right;
+} Node;
+
+typedef struct {
+    Node* nodes[MAX_CHAR];
+    int size;
+} MinHeap;
+
+int isVowel(char ch) {
+    return ch=='a'||ch=='e'||ch=='i'||ch=='o'||ch=='u';
+}
+
+Node* createNode(char data, int freq) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    node->data = data;
+    node->freq = freq;
+    node->left = node->right = NULL;
+    return node;
+}
+
+void swap(Node** a, Node** b) {
+    Node* t = *a;
+    *a = *b;
+    *b = t;
+}
+
+void minHeapify(MinHeap* heap, int i) {
+    int smallest = i, l = 2*i + 1, r = 2*i + 2;
+    if (l < heap->size && heap->nodes[l]->freq < heap->nodes[smallest]->freq)
+        smallest = l;
+    if (r < heap->size && heap->nodes[r]->freq < heap->nodes[smallest]->freq)
+        smallest = r;
+    if (smallest != i) {
+        swap(&heap->nodes[i], &heap->nodes[smallest]);
+        minHeapify(heap, smallest);
+    }
+}
+
+Node* extractMin(MinHeap* heap) {
+    Node* temp = heap->nodes[0];
+    heap->nodes[0] = heap->nodes[--heap->size];
+    minHeapify(heap, 0);
+    return temp;
+}
+
+void insertMinHeap(MinHeap* heap, Node* node) {
+    int i = heap->size++;
+    while (i && node->freq < heap->nodes[(i-1)/2]->freq) {
+        heap->nodes[i] = heap->nodes[(i-1)/2];
+        i = (i-1)/2;
+    }
+    heap->nodes[i] = node;
+}
+
+MinHeap* buildMinHeap(char data[], int freq[], int size) {
+    MinHeap* heap = (MinHeap*)malloc(sizeof(MinHeap));
+    heap->size = size;
+    for (int i = 0; i < size; i++)
+        heap->nodes[i] = createNode(data[i], freq[i]);
+    for (int i = (size-2)/2; i >= 0; i--)
+        minHeapify(heap, i);
+    return heap;
+}
+
+Node* buildHuffmanTree(char data[], int freq[], int size) {
+    MinHeap* heap = buildMinHeap(data, freq, size);
+    while (heap->size > 1) {
+        Node* left = extractMin(heap);
+        Node* right = extractMin(heap);
+        Node* top = createNode('$', left->freq + right->freq);
+        top->left = left;
+        top->right = right;
+        insertMinHeap(heap, top);
+    }
+    return extractMin(heap);
+}
+
+void generateCodes(Node* root, char code[], int top, char codes[MAX_CHAR][MAX_CHAR]) {
+    if (root->left) {
+        code[top] = '0';
+        generateCodes(root->left, code, top + 1, codes);
+    }
+    if (root->right) {
+        code[top] = '1';
+        generateCodes(root->right, code, top + 1, codes);
+    }
+    if (!root->left && !root->right) {
+        code[top] = '\0';
+        strcpy(codes[(int)root->data], code);
+    }
+}
+
+int main() {
+    char str[MAX_LEN];
+    int freq[MAX_CHAR] = {0};
+    char symbols[MAX_CHAR];
+    int symCount = 0;
+
+    fgets(str, MAX_LEN, stdin);
+    str[strcspn(str, "\n")] = 0;
+
+    for (int i = 0; str[i]; i++) {
+        if (isVowel(str[i]))
+            str[i] = '*';
+        freq[(int)str[i]]++;
+    }
+
+    for (int i = 0; i < MAX_CHAR; i++)
+        if (freq[i])
+            symbols[symCount++] = (char)i;
+
+    Node* root = buildHuffmanTree(symbols, freq, symCount);
+
+    char codes[MAX_CHAR][MAX_CHAR], code[MAX_CHAR];
+    generateCodes(root, code, 0, codes);
+
+    for (int i = 0; i < symCount; i++)
+        printf("'%c': %s\n", symbols[i], codes[(int)symbols[i]]);
+
+    printf("Encoded: ");
+    for (int i = 0; str[i]; i++)
+        printf("%s", codes[(int)str[i]]);
+    printf("\n");
+
+    return 0;
+}
